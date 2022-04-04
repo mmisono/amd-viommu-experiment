@@ -8,8 +8,11 @@ ssh -p ${PORT} ${SERVER} -i ${SSHKEY} << 'ENDSSH'
 
 sudo apt update
 sudo apt upgrade -y
-sudo apt install -y zsh vim git tmux python3-pip
-sudo python3 -m pip install fire numpy
+sudo apt install -y tig zsh vim git tmux hwloc \
+                    libelf-dev libssl-dev dwarves \
+                    python3-pip python3-venv \
+                    clang-format
+sudo python3 -m pip install fire numpy yapf
 
 ENDSSH
 
