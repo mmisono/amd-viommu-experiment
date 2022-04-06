@@ -1,8 +1,11 @@
 *.swp
 *.cmd
 *.o
+*.o.d
 *.ko
 *.mod
 *.mod.*
+*.idx
 Module.symvers
 modules.order
+compile_commands.json
