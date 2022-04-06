@@ -3,4 +3,5 @@
 ```
 USER=username NAME=amd148 ./environment.sh
 ./setup.sh
+./ssh.sh
 ```
