@@ -16,7 +16,6 @@
 # Mount extra space, if haven't already
 if [ ! -d /mnt/extra ]; then
     sudo mkdir -p /mnt/extra
-    sudo chmod 777 /mnt/extra
 
     if [ -e /usr/testbed/bin/mkextrafs ] && [ -b /dev/sdb ]; then
         if [ ! -b /dev/sdb1 ]; then
@@ -29,6 +28,8 @@ if [ ! -d /mnt/extra ]; then
         # Check that the mount succeeded (sometimes mkextrafs succeeds but device not mounted)
         mount | grep sdb || (echo "ERROR: mount failed, exiting!" && exit 1)
     else
-        echo "No disk found!"
+        echo "No disk found!" && exit 1
     fi
+
+    sudo chmod 777 /mnt/extra
 fi
