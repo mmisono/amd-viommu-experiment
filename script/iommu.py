@@ -221,8 +221,23 @@ def get_iommu_bdf_addr():
     return r
 
 
-def dump_device_table():
-    pass
+def get_dtba():
+    dtba = None
+    table_size = None
+    info = get_iommu_bdf_addr()
+    for bdf, addr in info:
+        mem = MMIO(addr)
+        offset, size, description, fields = REGS["DTBA"]
+        value = mem.read(offset, size)
+        field = BitField(value, size, fields, description)
+        dtba_ = field.DevTabBase << 12
+        table_size_  = (field.Size + 1) * 4096
+        if dtba is None:
+            dtba = dtba_
+            table_size = table_size_
+        if dtba != dtba_:
+                print("WARN: multiple Device Table Base Addresses are found")
+    return dtba, table_size
 
 
 class Runner:
@@ -231,17 +246,10 @@ class Runner:
         pass
 
     def dump_device_table(self):
-        dtba = None
-        info = get_iommu_bdf_addr()
-        for bdf, addr in info:
-            mem = MMIO(addr)
-            offset, size, description, fields = REGS["DTBA"]
-            value = mem.read(offset, size)
-            field = BitField(value, size, fields, description)
-            dtba_ = field.DevTabBase << 12
-            if dtba is None or dtba != dtba_:
-                dtba = dtba_
-                print(f"Device Table Base: {dtba:#08x}")
+        dtba, size = get_dtba()
+        print(f"Device Table Base: {dtba:#08x}, {size/1024}KB")
+
+        mem = MMIO(dtba, size)
 
     def regdump(self):
         info = get_iommu_bdf_addr()
