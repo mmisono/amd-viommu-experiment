@@ -1,3 +1,5 @@
+#!/bin/bash -eu
+
 if [ ! -d linux ]; then
     git clone --depth 1 --branch v5.17 https://github.com/torvalds/linux
 fi
