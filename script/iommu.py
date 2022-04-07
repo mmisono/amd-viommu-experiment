@@ -227,17 +227,22 @@ def get_dtba():
     info = get_iommu_bdf_addr()
     for bdf, addr in info:
         mem = MMIO(addr)
-        offset, size, description, fields = REGS["DTBA"]
-        value = mem.read(offset, size)
-        field = BitField(value, size, fields, description)
+        field = get_field(mem, "DTBA")
         dtba_ = field.DevTabBase << 12
-        table_size_  = (field.Size + 1) * 4096
+        table_size_ = (field.Size + 1) * 4096
         if dtba is None:
             dtba = dtba_
             table_size = table_size_
         if dtba != dtba_:
-                print("WARN: multiple Device Table Base Addresses are found")
+            print("WARN: multiple Device Table Base Addresses are found")
     return dtba, table_size
+
+
+def get_field(mem, name):
+    offset, size, description, fields = REGS[name]
+    value = mem.read(offset, size)
+    field = BitField(value, size, fields, description)
+    return field
 
 
 class Runner:
@@ -248,8 +253,22 @@ class Runner:
     def dump_device_table(self):
         dtba, size = get_dtba()
         print(f"Device Table Base: {dtba:#08x}, {size/1024}KB")
-
         mem = MMIO(dtba, size)
+
+    def check_viommu(self):
+        info = get_iommu_bdf_addr()
+        for bdf, addr in info:
+            print(f"{bdf} {addr:#x}")
+            mem = MMIO(addr)
+
+            ctl = get_field(mem, "CTL")
+            efr = get_field(mem, "EFR")
+
+            print(f"IommuEn: {ctl.IommuEn}")
+            print(f"vIommuEn: {ctl.vIommuEn}")
+            print(f"SNPSup: {efr.SNPSup}")
+            print(f"GTSup: {efr.GTSup}")
+            print(f"vIommuSup: {efr.vIommuSup}")
 
     def regdump(self):
         info = get_iommu_bdf_addr()
