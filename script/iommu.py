@@ -40,8 +40,12 @@ class BitField():
             s += "0x{:04X}".format(self.value)
         elif self.size == 4:
             s += "0x{:08X}".format(self.value)
-        else:
+        elif self.size == 8:
             s += "{:016X}".format(self.value)
+        elif self.size == 16:
+            s += "{:032X}".format(self.value)
+        else:
+            s += "{:064X}".format(self.value)
         for field in self.fields:
             s += "\n{}".format(" " * (len(self.description) + 2))
             s_ = "{{:{}s}} = 0x{{:X}}".format(self.max_field_name_len)
@@ -67,8 +71,8 @@ class MMIO():
         os.close(fd)
 
     def read(self, offset, size):
-        assert size in [1, 4, 8]
-        assert 0 <= offset + size < self.length
+        assert size in [1, 4, 8, 16, 32]
+        assert 0 <= offset + size <= self.length, f"{offset + size} > {self.length}"
 
         if size == 1:
             return self.byte[offset]
@@ -78,6 +82,17 @@ class MMIO():
         if size == 8:
             assert offset % 8 == 0
             return self.qword[offset // 8]
+        if size == 16:
+            assert offset % 16 == 0
+            a = int(self.read(offset, 8))
+            b = int(self.read(offset + 8, 8))
+            # FIXME: support big endian
+            return (b << 64) | a
+        if size == 32:
+            assert offset % 32 == 0
+            a = int(self.read(offset, 16))
+            b = int(self.read(offset + 16, 16))
+            return (b << 128) | a
 
         raise NotImplementedError
 
@@ -188,6 +203,51 @@ REGS = {
     ]),
 }
 
+# Device Table Entry
+DTEFields = [
+    ("V", (0, 0)),
+    ("TV", (1, 1)),
+    ("HAD", (7, 8)),
+    ("Mode", (9, 11)),
+    ("HostPageTableRootPointer", (12, 51)),
+    ("PPR", (52, 52)),
+    ("GPPR", (53, 53)),
+    ("GIoV", (54, 54)),
+    ("GV", (55, 55)),
+    ("GLX", (56, 57)),
+    ("GCR3TableRootPointer[14:12]", (58, 60)),
+    ("IR", (61, 61)),
+    ("IW", (62, 62)),
+    ("DomainID", (64, 79)),
+    ("GCR3TableRootPointer[30:15]", (80, 95)),
+    ("I", (96, 96)),
+    ("SE", (97, 97)),
+    ("SA", (98, 98)),
+    ("IoCtl", (99, 100)),
+    ("Cache", (101, 101)),
+    ("SD", (102, 102)),
+    ("EX", (103, 103)),
+    ("SysMgt", (104, 105)),
+    ("SATS", (106, 106)),
+    ("GCR3TableRootPointer[51:31]", (107, 127)),
+    ("IV", (128, 128)),
+    ("IntTabLen", (129, 132)),
+    ("IG", (133, 133)),
+    ("InterruptTableRootPointer", (134, 179)),
+    ("InitPass", (184, 184)),
+    ("EIntPass", (185, 185)),
+    ("NMIPass", (186, 186)),
+    ("HPTMode", (187, 187)),
+    ("IntCtl", (188, 189)),
+    ("Lint0Pass", (190, 190)),
+    ("Lint1Pass", (191, 191)),
+    ("vImuEn", (207, 207)),
+    ("GDeviceID", (208, 239)),
+    ("AttrV", (246, 246)),
+    ("Mode0FC", (247, 247)),
+    ("SnoopAttribute", (248, 255)),
+]
+
 
 def get_iommu_pci_bdf():
     bdfs = []
@@ -250,10 +310,27 @@ class Runner:
     def __init__(self):
         pass
 
-    def dump_device_table(self):
+    def dump_device_table(self, bdf=None):
         dtba, size = get_dtba()
         print(f"Device Table Base: {dtba:#08x}, {size/1024}KB")
         mem = MMIO(dtba, size)
+
+        offset = 0
+        field_size = 32
+        for entry in range(size // field_size):
+            bus = (entry >> 8) & 0xFF
+            dev = (entry >> 3) & 0x1F
+            func = entry & 0x7
+            bdf_ = f"{bus:02x}:{dev:02x}.{func:x}"
+            value = mem.read(offset, field_size)
+            field = BitField(value, field_size, DTEFields,
+                             "Device Table Entry")
+            if bdf is not None:
+                if bdf == bdf_:
+                    print(f"{bdf} {field}")
+            elif field.V == 1:
+                print(f"{bdf} {field}")
+            offset += field_size
 
     def check_viommu(self):
         info = get_iommu_bdf_addr()
@@ -266,6 +343,7 @@ class Runner:
 
             print(f"IommuEn: {ctl.IommuEn}")
             print(f"vIommuEn: {ctl.vIommuEn}")
+            print(f"GTEn: {ctl.GTEn}")
             print(f"SNPSup: {efr.SNPSup}")
             print(f"GTSup: {efr.GTSup}")
             print(f"vIommuSup: {efr.vIommuSup}")
