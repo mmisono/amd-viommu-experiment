@@ -214,17 +214,23 @@ def get_iommu_bdf_addr():
     return r
 
 
-def main():
-    info = get_iommu_bdf_addr()
-    for bdf, addr in info:
-        print(f"{bdf} {addr:#x}")
+def dump_device_table():
+    pass
 
-        mem = MMIO(addr)
-        for offset, size, description, fields in REGS.values():
-            value = mem.read(offset, size)
-            print(BitField(value, size, fields, description))
+
+class Runner:
+
+    def regdump(self):
+        info = get_iommu_bdf_addr()
+        for bdf, addr in info:
+            print(f"{bdf} {addr:#x}")
+
+            mem = MMIO(addr)
+            for offset, size, description, fields in REGS.values():
+                value = mem.read(offset, size)
+                print(BitField(value, size, fields, description))
 
 
 if __name__ == "__main__":
     import fire
-    fire.Fire(main)
+    fire.Fire(Runner)
