@@ -17,13 +17,20 @@ class BitField():
         self.size = size
         self.fields = fields
         self.description = description
-        self.max_field_len = 0
+        self.max_field_name_len = 0
         for field in fields:
-            if self.max_field_len < len(field[0]):
-                self.max_field_len = len(field[0])
+            if self.max_field_name_len < len(field[0]):
+                self.max_field_name_len = len(field[0])
 
     def get_mask(self, start_bit, end_bit):
         return (((1 << (end_bit + 1)) - 1) ^ (((1 << (start_bit)) - 1)))
+
+    def __getattr__(self, name):
+        for field in self.fields:
+            if field[0] == name:
+                val = (self.value & self.get_mask(*field[1])) >> field[1][0]
+                return val
+        raise AttributeError
 
     def __str__(self):
         s = "{}: ".format(self.description)
@@ -37,7 +44,7 @@ class BitField():
             s += "{:016X}".format(self.value)
         for field in self.fields:
             s += "\n{}".format(" " * (len(self.description) + 2))
-            s_ = "{{:{}s}} = 0x{{:X}}".format(self.max_field_len)
+            s_ = "{{:{}s}} = 0x{{:X}}".format(self.max_field_name_len)
             s += s_.format(
                 field[0],
                 (self.value & self.get_mask(*field[1])) >> field[1][0])
@@ -219,6 +226,22 @@ def dump_device_table():
 
 
 class Runner:
+
+    def __init__(self):
+        pass
+
+    def dump_device_table(self):
+        dtba = None
+        info = get_iommu_bdf_addr()
+        for bdf, addr in info:
+            mem = MMIO(addr)
+            offset, size, description, fields = REGS["DTBA"]
+            value = mem.read(offset, size)
+            field = BitField(value, size, fields, description)
+            dtba_ = field.DevTabBase << 12
+            if dtba is None or dtba != dtba_:
+                dtba = dtba_
+                print(f"Device Table Base: {dtba:#08x}")
 
     def regdump(self):
         info = get_iommu_bdf_addr()
