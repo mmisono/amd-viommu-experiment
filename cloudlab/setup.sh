@@ -19,7 +19,7 @@ sudo apt install -y tig zsh vim git tmux hwloc \
                     libelf-dev libssl-dev dwarves \
                     python3-pip python3-venv \
                     bear clangd clang-format \
-                    kexec-tools
+                    ripgrep kexec-tools
 sudo python3 -m pip install fire numpy yapf
 
 bash setup_disk.sh
