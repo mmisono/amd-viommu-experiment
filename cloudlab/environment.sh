@@ -8,8 +8,10 @@ if [ -z ${USER+x} ]; then
     exit
 fi
 
+CLOUDLAB_LOCATION=${CLOUDLAB_LOCATION:-utah}
+
 export PORT=22
-export SERVER=${USER}@${NAME}.utah.cloudlab.us
+export SERVER=${USER}@${NAME}.${CLOUDLAB_LOCATION}.cloudlab.us
 export SCRIPTDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 export SSHKEY=${SSHKEY:-${SCRIPTDIR}/id_rsa}
 

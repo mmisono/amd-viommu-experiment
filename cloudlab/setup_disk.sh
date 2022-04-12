@@ -31,6 +31,11 @@ if [ ! -d /mnt/extra ]; then
             echo "/dev/nvme0n1p4 /mnt/extra/ ext4 defaults 0 0" | sudo tee -a /etc/fstab
             sudo mount -a
             mount | grep nvme || (echo "ERROR: mount failed, exiting!" && exit 1)
+        elif [ -b /dev/sda4 ]; then
+            sudo mkfs.ext4 /dev/sda4
+            echo "/dev/sda4 /mnt/extra/ ext4 defaults 0 0" | sudo tee -a /etc/fstab
+            sudo mount -a
+            mount | grep sda4 || (echo "ERROR: mount failed, exiting!" && exit 1)
         fi
     else
         echo "No disk found!" && exit 1
